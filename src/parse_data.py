@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ParseData:
-    def __init__(self, height, width, stride, pairs, background_proportion, background_augment):
+    def __init__(self, height, width, stride, pairs, background_proportion, background_augment, train_prop, validation_prop):
         self.images = {'images': [],
                        'masks': []
                        }
@@ -19,12 +19,22 @@ class ParseData:
         self.balanced_patches = {'images': [],
                                  'masks': []
                                  }
+        self.train_split = {'images': [],
+                            'masks': []
+                            }
+        self.val_split = {'images': [],
+                          'masks': []}
+        self.test_split = {'images': [],
+                           'masks': []
+                           }
         self.height = height
         self.width = width
         self.stride = stride
         self.pairs = pairs
         self.background_proportion = background_proportion
         self.background_augment = background_augment
+        self.train_prop = train_prop
+        self.val_prop = validation_prop
         self.logger = logging.getLogger(__name__)
 
     def __download(self, source, filename):
@@ -194,6 +204,19 @@ class ParseData:
         self.logger.info(
             f'The proportion of background images in the balanced dataset is {balanced_background / (balanced_background + balanced_mito):.2f}')
 
+        if self.val_prop > 0:
+            print(f"\nThere are {len(self.train_split['images'])} patches in the train set.")
+            print(f"There are {len(self.val_split['images'])} patches in the validation set.")
+            print(f"There are {len(self.test_split['images'])} patches in the test set.")
+            self.logger.info(f"There are {len(self.train_split['images'])} patches in the train set.")
+            self.logger.info(f"There are {len(self.val_split['images'])} patches in the validation set.")
+            self.logger.info(f"There are {len(self.test_split['images'])} patches in the test set.")
+        else:
+            print(f"\nThere are {len(self.train_split['images'])} patches in the train set.")
+            print(f"There are {len(self.test_split['images'])} patches in the test set.")
+            self.logger.info(f"There are {len(self.train_split['images'])} patches in the train set.")
+            self.logger.info(f"There are {len(self.test_split['images'])} patches in the test set.")
+
         # plot the specified pairs
         plot_images = random.sample(range(int(len(self.balanced_patches['images']) * self.background_proportion)),
                                     self.pairs)
@@ -246,6 +269,33 @@ class ParseData:
 
         return additional_images, additional_masks
 
+    def __split_data(self):
+        data_size = len(self.balanced_patches['images'])
+        num_train = int(self.train_prop * data_size)
+        train_idxs = set(random.sample(range(data_size), num_train))
+        if self.val_prop > 0:
+            num_val = int(self.val_prop * num_train)
+            val_idxs = set(random.sample(list(train_idxs), num_val))
+
+            for i in range(data_size):
+                if i in val_idxs:
+                    self.val_split['images'].append(self.balanced_patches['images'][i])
+                    self.val_split['masks'].append(self.balanced_patches['masks'][i])
+                elif i in train_idxs:
+                    self.train_split['images'].append(self.balanced_patches['images'][i])
+                    self.train_split['masks'].append(self.balanced_patches['masks'][i])
+                else:
+                    self.test_split['images'].append(self.balanced_patches['images'][i])
+                    self.test_split['masks'].append(self.balanced_patches['masks'][i])
+        else:
+            for i in range(data_size):
+                if i in train_idxs:
+                    self.train_split['images'].append(self.balanced_patches['images'][i])
+                    self.train_split['masks'].append(self.balanced_patches['masks'][i])
+                else:
+                    self.test_split['images'].append(self.balanced_patches['images'][i])
+                    self.test_split['masks'].append(self.balanced_patches['masks'][i])
+
     def collect_data(self, download):
         """
         Driver of the class
@@ -272,5 +322,7 @@ class ParseData:
 
         self.__patch_images()
         self.__balance_data()
+
+        self.__split_data()
 
         self.__explore_data()
