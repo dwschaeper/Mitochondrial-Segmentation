@@ -2,10 +2,12 @@
 
 import argparse
 import logging
+import random
+import matplotlib.pyplot as plt
 
 from torch.utils.data import DataLoader
 from src.parse_data import ParseData
-from src.model_train import MitochondrialEMDataset, UNet, train
+from src.model_train import MitochondrialEMDataset, UNet, train_model, test_model
 
 
 def parse():
@@ -42,8 +44,10 @@ def parse():
                         help='The proportion of the training split that will be reserved for validation.')
     parser.add_argument('--batch_size', default=32, type=int,
                         help='The batch size to be used for training.')
-    parser.add_argument('--epochs', default=2, type=int,
+    parser.add_argument('--epochs', default=20, type=int,
                         help='The number of training epochs.')
+    parser.add_argument('--test_examples', default=3, type=int,
+                        help='The number of examples to depict from the test dataset.')
 
     args = parser.parse_args()
 
@@ -71,9 +75,100 @@ def main():
         val_dataset = MitochondrialEMDataset(data_parser.val_split['images'], data_parser.val_split['masks'])
         test_dataset = MitochondrialEMDataset(data_parser.test_split['images'], data_parser.test_split['masks'])
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+        # collect examples to plot
+        example_idx = random.sample(range(len(test_dataset)), args.test_examples)
+        example_images = [test_dataset[i] for i in example_idx]
+
 
         model = UNet()
-        train(model, train_loader, args.epochs, logging)
+        history = train_model(model, train_loader, args.epochs, logging, val_loader)
+        test_model(model, test_loader, logging, example_images)
+
+        # Loss Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_loss'], label='Train Loss')
+        plt.plot(list(range(1, args.epochs + 1)), history['val_loss'], label='Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training vs Validation Loss')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/loss_plot.png')
+        plt.close()
+
+        # Accuracy Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_acc'], label='Train Accuracy')
+        plt.plot(list(range(1, args.epochs + 1)), history['val_acc'], label='Validation Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.title('Training vs Validation Accuracy')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/accuracy_plot.png')
+        plt.close()
+
+        # IoU Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_acc'], label='Train IoU')
+        plt.plot(list(range(1, args.epochs + 1)), history['val_acc'], label='Validation IoU')
+        plt.xlabel('Epoch')
+        plt.ylabel('IoU')
+        plt.title('Training vs Validation IoU')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/iou_plot.png')
+        plt.close()
+    else:
+        # create the datasets
+        train_dataset = MitochondrialEMDataset(data_parser.train_split['images'], data_parser.train_split['masks'])
+        test_dataset = MitochondrialEMDataset(data_parser.test_split['images'], data_parser.test_split['masks'])
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+        # collect examples to plot
+        example_idx = random.sample(range(len(test_dataset)), args.test_examples)
+        example_images = [test_dataset[i] for i in example_idx]
+
+        model = UNet()
+        history = train_model(model, train_loader, args.epochs, logging)
+        test_model(model, test_loader, logging, example_images)
+
+        # Loss Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_loss'], label='Train Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training Loss')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/loss_plot.png')
+        plt.close()
+
+        # Accuracy Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_acc'], label='Train Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.title('Training Accuracy')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/accuracy_plot.png')
+        plt.close()
+
+        # IoU Plot
+        plt.figure(figsize=(8, 5))
+        plt.plot(list(range(1, args.epochs + 1)), history['train_acc'], label='Train IoU')
+        plt.xlabel('Epoch')
+        plt.ylabel('IoU')
+        plt.title('Training IoU')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('images/iou_plot.png')
+        plt.close()
 
 
 if __name__ == '__main__':
