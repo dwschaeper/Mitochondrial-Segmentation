@@ -3,7 +3,7 @@ This work takes the data from https://www.epfl.ch/labs/cvlab/data/data-em/
 and performs semantic segmentation with the goal of creating masks for mitochondria.
 
 ####
-There are examples outputs in the ```examples``` directory in this repo. The final test
+There are example outputs in the ```examples``` directory in this repo. The final test
 accuracy after training was 0.9946, and the test IoU was 0.8850.
 
 ####
@@ -11,7 +11,7 @@ To run, simply clone this repo,
 ```commandline
 git clone https://github.com/dwschaeper/Mitochondrial-Segmentation
 ```
-and then run the main script. The first time it is run, the download flag should be used
+and then run the main script. The first time it is run, the download flag should be used,
 but after that, refrain from using it more than necessary to not needlessly ping the host.
 ```commandline
 python main.py --download
