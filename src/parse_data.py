@@ -270,6 +270,11 @@ class ParseData:
         return additional_images, additional_masks
 
     def __split_data(self):
+        """
+        Split the data into test, train, and validation splits. If the validation split proportion is set to 0, no
+        validation split will be created.
+        :return: None
+        """
         data_size = len(self.balanced_patches['images'])
         num_train = int(self.train_prop * data_size)
         train_idxs = set(random.sample(range(data_size), num_train))
